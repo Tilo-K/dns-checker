@@ -11,9 +11,7 @@ jobs:
         go: ["1.24.x"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v1
-        with:
-          fetch-depth: 1
+      - uses: actions/checkout@v4
       - uses: WillAbides/setup-go-faster@v1.7.0
         with:
           go-version: ${{ matrix.go }}
