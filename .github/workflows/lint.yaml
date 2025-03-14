@@ -12,12 +12,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: WillAbides/setup-go-faster@v1.7.0
+      - uses: WillAbides/setup-go-faster@v1.14.0
         with:
           go-version: ${{ matrix.go }}
       - run: "go test ./..."
       - run: "go vet ./..."
-      - uses: dominikh/staticcheck-action@v1.2.0
+      - uses: dominikh/staticcheck-action@v1.3.0
         with:
           install-go: false
           cache-key: ${{ matrix.go }}
