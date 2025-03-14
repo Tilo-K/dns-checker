@@ -12,5 +12,10 @@ func main() {
 		port = envPort
 	}
 
-	http.ListenAndServe(":"+port, nil)
+	http.Handle("/", http.FileServer(http.Dir("./static")))
+
+	err := http.ListenAndServe(":"+port, nil)
+	if err != nil {
+		panic(err)
+	}
 }
