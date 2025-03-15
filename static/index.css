@@ -75,3 +75,7 @@ table td {
     gap: 2rem;
 
 }
+
+.highlight {
+    background-color: rgba(82, 45, 128, 0.34);
+}

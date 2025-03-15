@@ -8,25 +8,12 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"tilok.dev/dns-checker/types"
+	"tilok.dev/dns-checker/util"
 	"time"
 )
 
-type DnsResult struct {
-	Operator        string
-	DnsServer       string
-	Addreses        []string
-	Cname           string
-	Txts            []string
-	Ns              []string
-	RequestDuration time.Duration
-}
-
-type DnsServer struct {
-	Operator string
-	address  string
-}
-
-type ByDuration []DnsResult
+type ByDuration []types.DnsResult
 
 func (b ByDuration) Len() int      { return len(b) }
 func (b ByDuration) Swap(i, j int) { b[i], b[j] = b[j], b[i] }
@@ -50,14 +37,14 @@ func createCustomResolver(dnsServer string, timeout time.Duration) *net.Resolver
 	}
 }
 
-func GetDnsServers() []DnsServer {
+func GetDnsServers() []types.DnsServer {
 	data, err := os.ReadFile("servers.csv")
 	if err != nil {
 		panic(err)
 	}
 
 	lines := strings.Split(string(data), "\n")
-	servers := make([]DnsServer, 0)
+	servers := make([]types.DnsServer, 0)
 
 	skippedFirst := false
 	for _, line := range lines {
@@ -78,9 +65,9 @@ func GetDnsServers() []DnsServer {
 		if strings.Contains(ip, ":") && !strings.Contains(ip, ".") && !strings.Contains(ip, "[") {
 			ip = fmt.Sprintf("[%s]:53", ip)
 		}
-		servers = append(servers, DnsServer{
+		servers = append(servers, types.DnsServer{
 			Operator: cols[0],
-			address:  ip,
+			Address:  ip,
 		})
 	}
 	return servers
@@ -96,10 +83,10 @@ func getContext() context.Context {
 	return ctxt
 }
 
-func QueryServers(host string) ([]DnsResult, []error) {
+func QueryServers(host string) ([]types.DnsResult, []error) {
 	var wg sync.WaitGroup
 
-	results := make([]DnsResult, 0)
+	results := make([]types.DnsResult, 0)
 	errors := make([]error, 0)
 
 	servers := GetDnsServers()
@@ -108,7 +95,7 @@ func QueryServers(host string) ([]DnsResult, []error) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			resolver := createCustomResolver(server.address, 0)
+			resolver := createCustomResolver(server.Address, 0)
 
 			start := time.Now()
 			hosts, err := resolver.LookupHost(getContext(), host)
@@ -143,9 +130,9 @@ func QueryServers(host string) ([]DnsResult, []error) {
 				nss = append(nss, nserver.Host)
 			}
 
-			results = append(results, DnsResult{
+			results = append(results, types.DnsResult{
 				Operator:        server.Operator,
-				DnsServer:       server.address,
+				DnsServer:       server.Address,
 				Addreses:        hosts,
 				RequestDuration: elapsed,
 				Cname:           cname,
@@ -161,15 +148,35 @@ func QueryServers(host string) ([]DnsResult, []error) {
 	return results, errors
 }
 
-func ConvertResultToTable(results []DnsResult) string {
-	result := "<table>\n<thead><tr><th>Operator</th><th>Server</th><th>A</th><th>TXT</th><th>NS</th><th>Request Duration</th></tr></thead>\n<tbody>\n"
+func ConvertResultToTable(results []types.DnsResult) string {
+	counts := util.CountResults(results)
+	result := "<table>\n<thead><tr><th>Operator</th><th>Server</th><th>A</th><th>TXT</th><th>NS</th><th>CNAME</th><th>Request Duration</th></tr></thead>\n<tbody>\n"
 	for _, dnsResult := range results {
+		addrClasses := ""
+		cnameClasses := ""
+		txtClasses := ""
+		nsClasses := ""
+
+		if counts.Addreses == util.Hash(dnsResult.Addreses) {
+			addrClasses = "highlight"
+		}
+		if counts.Cname == util.Hash([]string{dnsResult.Cname}) {
+			cnameClasses = "highlight"
+		}
+		if counts.Txts == util.Hash(dnsResult.Txts) {
+			txtClasses = "highlight"
+		}
+		if counts.Ns == util.Hash(dnsResult.Ns) {
+			nsClasses = "highlight"
+		}
+
 		result += "<tr>\n"
 		result += "<td>" + dnsResult.Operator + "</td>\n"
 		result += "<td>" + dnsResult.DnsServer + "</td>\n"
-		result += "<td>" + strings.Join(dnsResult.Addreses, "<br />") + "</td>\n"
-		result += "<td>" + strings.Join(dnsResult.Txts, "<br />") + "</td>\n"
-		result += "<td>" + strings.Join(dnsResult.Ns, "<br />") + "</td>\n"
+		result += "<td class=\"" + addrClasses + "\">" + strings.Join(dnsResult.Addreses, "<br />") + "</td>\n"
+		result += "<td class=\"" + txtClasses + "\">" + strings.Join(dnsResult.Txts, "<br />") + "</td>\n"
+		result += "<td class=\"" + nsClasses + "\">" + strings.Join(dnsResult.Ns, "<br />") + "</td>\n"
+		result += "<td class=\"" + cnameClasses + "\">" + dnsResult.Cname + "</td>\n"
 		result += "<td>" + dnsResult.RequestDuration.String() + "</td>\n"
 		result += "</tr>\n"
 	}
