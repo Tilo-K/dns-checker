@@ -17,9 +17,12 @@ func DnsResult(w http.ResponseWriter, req *http.Request) {
 
 	if len(results) == 0 {
 		w.WriteHeader(200)
+		errRes := ""
 		for _, erro := range errors {
-			_, _ = w.Write([]byte(erro.Error()))
+			errRes += erro.Error() + "<br>"
 		}
+		_, _ = w.Write([]byte(errRes))
+		return
 	}
 
 	table := dns.ConvertResultToTable(results)

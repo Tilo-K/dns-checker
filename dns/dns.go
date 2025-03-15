@@ -14,6 +14,7 @@ import (
 )
 
 type ByDuration []types.DnsResult
+type ByOperator []types.DnsResult
 
 func (b ByDuration) Len() int      { return len(b) }
 func (b ByDuration) Swap(i, j int) { b[i], b[j] = b[j], b[i] }
@@ -21,22 +22,68 @@ func (b ByDuration) Less(i, j int) bool {
 	return b[i].RequestDuration.Microseconds() < b[j].RequestDuration.Microseconds()
 }
 
+func (b ByOperator) Len() int      { return len(b) }
+func (b ByOperator) Swap(i, j int) { b[i], b[j] = b[j], b[i] }
+func (b ByOperator) Less(i, j int) bool {
+	return b[i].Operator < b[j].Operator
+}
+
+//	func createCustomResolver(dnsServer string, timeout time.Duration) *net.Resolver {
+//		if timeout == 0 {
+//			timeout = time.Second * 10
+//		}
+//
+//		return &net.Resolver{
+//			PreferGo: true,
+//			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+//				d := net.Dialer{
+//					Timeout: timeout,
+//				}
+//				return d.DialContext(ctx, network, dnsServer)
+//			},
+//		}
+//	}
 func createCustomResolver(dnsServer string, timeout time.Duration) *net.Resolver {
 	if timeout == 0 {
-		timeout = time.Second * 10
+		timeout = 10 * time.Second
 	}
-
 	return &net.Resolver{
 		PreferGo: true,
 		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-			d := net.Dialer{
-				Timeout: timeout,
+			ipStr, _, err := net.SplitHostPort(dnsServer)
+			if err != nil {
+				return nil, err
 			}
-			return d.DialContext(ctx, network, dnsServer)
+			ip := net.ParseIP(ipStr)
+			if ip == nil {
+				return nil, fmt.Errorf("invalid IP address: %s", ipStr)
+			}
+			var netType string
+			if strings.Contains(ipStr, "tcp") {
+				if ip.To4() != nil {
+					netType = "tcp4"
+				} else {
+					netType = "tcp6"
+				}
+			} else {
+				if ip.To4() != nil {
+					netType = "udp4"
+				} else {
+					netType = "udp6"
+				}
+			}
+
+			d := net.Dialer{Timeout: timeout}
+			conn, err := d.DialContext(ctx, netType, dnsServer)
+			if err != nil {
+				fmt.Println(err)
+				return nil, err
+			}
+			return conn, nil
 		},
+		StrictErrors: true,
 	}
 }
-
 func GetDnsServers() []types.DnsServer {
 	data, err := os.ReadFile("servers.csv")
 	if err != nil {
@@ -75,10 +122,7 @@ func GetDnsServers() []types.DnsServer {
 
 func getContext() context.Context {
 	timeout, _ := time.ParseDuration("5s")
-	ctxt, err := context.WithTimeout(context.Background(), timeout)
-	if err != nil {
-		fmt.Println(err)
-	}
+	ctxt, _ := context.WithTimeout(context.Background(), timeout)
 
 	return ctxt
 }
@@ -143,14 +187,15 @@ func QueryServers(host string) ([]types.DnsResult, []error) {
 	}
 
 	wg.Wait()
-	sort.Sort(ByDuration(results))
+	sort.Sort(ByOperator(results))
 
 	return results, errors
 }
 
 func ConvertResultToTable(results []types.DnsResult) string {
+	currentTime := time.Now().Format(time.RFC3339)
 	counts := util.CountResults(results)
-	result := "<table>\n<thead><tr><th>Operator</th><th>Server</th><th>A</th><th>TXT</th><th>NS</th><th>CNAME</th><th>Request Duration</th></tr></thead>\n<tbody>\n"
+	result := currentTime + "<table>\n<thead><tr><th>Operator</th><th>Server</th><th>A</th><th>TXT</th><th>NS</th><th>CNAME</th><th>Request Duration</th></tr></thead>\n<tbody>\n"
 	for _, dnsResult := range results {
 		addrClasses := ""
 		cnameClasses := ""

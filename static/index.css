@@ -79,3 +79,45 @@ table td {
 .highlight {
     background-color: rgba(82, 45, 128, 0.34);
 }
+
+input[type="text"] {
+    padding: 0.5rem;
+    border: 1px solid #333;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    background-color: #4a4a4a;
+    color: #dddddd;
+}
+
+button {
+    padding: 0.5rem;
+    border: 1px solid #333;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    color: #dddddd;
+    background-color: #522d80;
+    cursor: pointer;
+}
+
+#header {
+    display: flex;
+    justify-content: flex-start;
+    gap: 0.5rem;
+    align-items: end;
+    padding: 0.5rem;
+}
+
+#title {
+    font-size: 2rem;
+}
+
+#mabeBy{
+    font-size: 0.8rem;
+    color: #373737;
+    height: fit-content;
+}
+
+#mabeBy a{
+    color: #373737;
+    text-decoration: none;
+}
