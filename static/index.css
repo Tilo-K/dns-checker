@@ -17,36 +17,61 @@
 html{
     font-family: Arial, Helvetica, sans-serif;
 }
+
+body{
+    margin: 0;
+    background-color: #262626;
+    color: #dddddd;
+}
 table {
     border-collapse: collapse;
     width: 100%;
 }
 
 table td, table th {
-    border: 1px solid #ddd;
-    padding: 8px;
+    border: 1px solid #333;
+    padding: 5px 10px;
 }
 
-table tr:nth-child(even){background-color: #f2f2f2;}
+table tr:nth-child(even){background-color: #1e1e1e;}
 
-table tr:hover {background-color: #ddd;}
+table tr:hover {background-color: #111;}
 
 table th {
-    padding-top: 12px;
-    padding-bottom: 12px;
+    padding-top: 4px;
+    padding-bottom: 4px;
     text-align: left;
-    background-color: #04AA6D;
-    color: white;
+    background-color: #522d80;
+}
+
+table td {
+    max-height: fit-content;
+    font-size: 11pt;
 }
 
 .animate-spin {
     animation-name: spin;
     animation-duration: 1000ms;
     animation-iteration-count: infinite;
-    animation-timing-function: ease-in;
+    animation-timing-function: linear;
 }
 
 @keyframes spin {
     from {transform:rotate(0deg);}
     to {transform:rotate(360deg);}
+}
+
+#content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    gap: 1rem;
+}
+
+#searchForm {
+    display: flex;
+    gap: 2rem;
+
 }

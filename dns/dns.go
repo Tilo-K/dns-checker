@@ -12,9 +12,18 @@ import (
 )
 
 type DnsResult struct {
+	Operator        string
 	DnsServer       string
 	Addreses        []string
+	Cname           string
+	Txts            []string
+	Ns              []string
 	RequestDuration time.Duration
+}
+
+type DnsServer struct {
+	Operator string
+	address  string
 }
 
 type ByDuration []DnsResult
@@ -41,14 +50,15 @@ func createCustomResolver(dnsServer string, timeout time.Duration) *net.Resolver
 	}
 }
 
-func GetDnsServers() []string {
+func GetDnsServers() []DnsServer {
 	data, err := os.ReadFile("servers.csv")
 	if err != nil {
 		panic(err)
 	}
 
 	lines := strings.Split(string(data), "\n")
-	var servers []string
+	servers := make([]DnsServer, 0)
+
 	skippedFirst := false
 	for _, line := range lines {
 		if !skippedFirst {
@@ -68,9 +78,22 @@ func GetDnsServers() []string {
 		if strings.Contains(ip, ":") && !strings.Contains(ip, ".") && !strings.Contains(ip, "[") {
 			ip = fmt.Sprintf("[%s]:53", ip)
 		}
-		servers = append(servers, ip)
+		servers = append(servers, DnsServer{
+			Operator: cols[0],
+			address:  ip,
+		})
 	}
 	return servers
+}
+
+func getContext() context.Context {
+	timeout, _ := time.ParseDuration("5s")
+	ctxt, err := context.WithTimeout(context.Background(), timeout)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	return ctxt
 }
 
 func QueryServers(host string) ([]DnsResult, []error) {
@@ -85,10 +108,29 @@ func QueryServers(host string) ([]DnsResult, []error) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			resolver := createCustomResolver(server, 0)
+			resolver := createCustomResolver(server.address, 0)
 
 			start := time.Now()
-			hosts, err := resolver.LookupHost(context.Background(), host)
+			hosts, err := resolver.LookupHost(getContext(), host)
+			if err != nil {
+				errors = append(errors, err)
+				return
+			}
+			cname, err := resolver.LookupCNAME(getContext(), host)
+			if err != nil {
+				errors = append(errors, err)
+				return
+			}
+			txts, err := resolver.LookupTXT(getContext(), host)
+			if err != nil {
+				errors = append(errors, err)
+				return
+			}
+			ns, err := resolver.LookupNS(getContext(), host)
+			if err != nil {
+				errors = append(errors, err)
+				return
+			}
 			elapsed := time.Since(start)
 
 			if err != nil {
@@ -96,10 +138,19 @@ func QueryServers(host string) ([]DnsResult, []error) {
 				return
 			}
 
+			nss := make([]string, 0)
+			for _, nserver := range ns {
+				nss = append(nss, nserver.Host)
+			}
+
 			results = append(results, DnsResult{
-				DnsServer:       server,
+				Operator:        server.Operator,
+				DnsServer:       server.address,
 				Addreses:        hosts,
 				RequestDuration: elapsed,
+				Cname:           cname,
+				Txts:            txts,
+				Ns:              nss,
 			})
 		}()
 	}
@@ -111,11 +162,14 @@ func QueryServers(host string) ([]DnsResult, []error) {
 }
 
 func ConvertResultToTable(results []DnsResult) string {
-	result := "<table>\n<thead><tr><th>Server</th><th>Addresses</th><th>Request Duration</th></tr></thead>\n<tbody>\n"
+	result := "<table>\n<thead><tr><th>Operator</th><th>Server</th><th>A</th><th>TXT</th><th>NS</th><th>Request Duration</th></tr></thead>\n<tbody>\n"
 	for _, dnsResult := range results {
 		result += "<tr>\n"
+		result += "<td>" + dnsResult.Operator + "</td>\n"
 		result += "<td>" + dnsResult.DnsServer + "</td>\n"
 		result += "<td>" + strings.Join(dnsResult.Addreses, "<br />") + "</td>\n"
+		result += "<td>" + strings.Join(dnsResult.Txts, "<br />") + "</td>\n"
+		result += "<td>" + strings.Join(dnsResult.Ns, "<br />") + "</td>\n"
 		result += "<td>" + dnsResult.RequestDuration.String() + "</td>\n"
 		result += "</tr>\n"
 	}

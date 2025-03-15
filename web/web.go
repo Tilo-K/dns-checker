@@ -12,10 +12,16 @@ func DnsResult(w http.ResponseWriter, req *http.Request) {
 		fmt.Println(err)
 	}
 
-	d := req.Form.Encode()
-	fmt.Println(d)
+	data := req.Form.Get("domain")
+	results, errors := dns.QueryServers(data)
 
-	results, _ := dns.QueryServers("tilo.host")
+	if len(results) == 0 {
+		w.WriteHeader(200)
+		for _, erro := range errors {
+			_, _ = w.Write([]byte(erro.Error()))
+		}
+	}
+
 	table := dns.ConvertResultToTable(results)
 	_, err = w.Write([]byte(table))
 	if err != nil {

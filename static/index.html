@@ -9,8 +9,8 @@
 <body>
     <script src="/htmx.min.js"></script>
     <h1>DNS Checker</h1>
-    <div>
-        <form>
+    <div id="content">
+        <form id="searchForm">
             <input type="text" name="domain" />
 
             <button hx-post="/hx/dnsResult" hx-target="#result" hx-indicator="#spinner">
