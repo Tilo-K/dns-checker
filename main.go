@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"os"
+	"tilok.dev/dns-checker/web"
 )
 
 func main() {
@@ -12,6 +13,7 @@ func main() {
 		port = envPort
 	}
 
+	http.HandleFunc("/hx/dnsResult", web.DnsResult)
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 
 	err := http.ListenAndServe(":"+port, nil)

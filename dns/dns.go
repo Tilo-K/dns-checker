@@ -89,7 +89,7 @@ func QueryServers(host string) ([]DnsResult, []error) {
 
 			start := time.Now()
 			hosts, err := resolver.LookupHost(context.Background(), host)
-			elapsed := time.Now().Sub(start)
+			elapsed := time.Since(start)
 
 			if err != nil {
 				errors = append(errors, err)
@@ -108,4 +108,18 @@ func QueryServers(host string) ([]DnsResult, []error) {
 	sort.Sort(ByDuration(results))
 
 	return results, errors
+}
+
+func ConvertResultToTable(results []DnsResult) string {
+	result := "<table>\n<thead><tr><th>Server</th><th>Addresses</th><th>Request Duration</th></tr></thead>\n<tbody>\n"
+	for _, dnsResult := range results {
+		result += "<tr>\n"
+		result += "<td>" + dnsResult.DnsServer + "</td>\n"
+		result += "<td>" + strings.Join(dnsResult.Addreses, "<br />") + "</td>\n"
+		result += "<td>" + dnsResult.RequestDuration.String() + "</td>\n"
+		result += "</tr>\n"
+	}
+	result += "</tbody>\n</table>"
+
+	return result
 }
