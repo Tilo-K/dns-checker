@@ -8,9 +8,10 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
+
 	"tilok.dev/dns-checker/types"
 	"tilok.dev/dns-checker/util"
-	"time"
 )
 
 type ByDuration []types.DnsResult
@@ -202,16 +203,16 @@ func ConvertResultToTable(results []types.DnsResult) string {
 		txtClasses := ""
 		nsClasses := ""
 
-		if counts.Addreses == util.Hash(dnsResult.Addreses) {
+		if counts.Addreses != util.Hash(dnsResult.Addreses) {
 			addrClasses = "highlight"
 		}
-		if counts.Cname == util.Hash([]string{dnsResult.Cname}) {
+		if counts.Cname != util.Hash([]string{dnsResult.Cname}) {
 			cnameClasses = "highlight"
 		}
-		if counts.Txts == util.Hash(dnsResult.Txts) {
+		if counts.Txts != util.Hash(dnsResult.Txts) {
 			txtClasses = "highlight"
 		}
-		if counts.Ns == util.Hash(dnsResult.Ns) {
+		if counts.Ns != util.Hash(dnsResult.Ns) {
 			nsClasses = "highlight"
 		}
 
