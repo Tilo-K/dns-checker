@@ -91,11 +91,11 @@ func GetDnsServers() []types.DnsServer {
 	return servers
 }
 
-func getContext() context.Context {
+func getContext() (context.Context, context.CancelFunc) {
 	timeout, _ := time.ParseDuration("5s")
-	ctxt, _ := context.WithTimeout(context.Background(), timeout)
+	ctxt, cancel := context.WithTimeout(context.Background(), timeout)
 
-	return ctxt
+	return ctxt, cancel
 }
 
 func QueryServers(host string) ([]types.DnsResult, []error) {
@@ -115,24 +115,25 @@ func QueryServers(host string) ([]types.DnsResult, []error) {
 				errors = append(errors, err)
 				return
 			}
-
+			context, cancel := getContext()
+			defer cancel()
 			start := time.Now()
-			hosts, err := resolver.LookupHost(getContext(), host)
+			hosts, err := resolver.LookupHost(context, host)
 			if err != nil {
 				errors = append(errors, err)
 				return
 			}
-			cname, err := resolver.LookupCNAME(getContext(), host)
+			cname, err := resolver.LookupCNAME(context, host)
 			if err != nil {
 				errors = append(errors, err)
 				return
 			}
-			txts, err := resolver.LookupTXT(getContext(), host)
+			txts, err := resolver.LookupTXT(context, host)
 			if err != nil {
 				errors = append(errors, err)
 				return
 			}
-			ns, err := resolver.LookupNS(getContext(), host)
+			ns, err := resolver.LookupNS(context, host)
 			if err != nil {
 				errors = append(errors, err)
 				return
