@@ -28,6 +28,11 @@ table {
     width: 100%;
 }
 
+label {
+    font-size: 1.2rem;
+    height: fit-content;
+}
+
 table td, table th {
     border: 1px solid #333;
     padding: 5px 10px;
@@ -73,7 +78,8 @@ table td {
 #searchForm {
     display: flex;
     gap: 2rem;
-
+    align-items: center;
+    justify-content: center;
 }
 
 .highlight {

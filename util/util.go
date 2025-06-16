@@ -3,7 +3,6 @@
 import (
 	"crypto/sha256"
 	"encoding/base64"
-	"maps"
 	"slices"
 	"tilok.dev/dns-checker/types"
 )
@@ -79,26 +78,6 @@ func CountResults(results []types.DnsResult) types.DnsCounts {
 			highestNsCount = count
 			highestNsStr = hash
 		}
-	}
-
-	addrKeys := len(slices.Collect(maps.Keys(addrCounts)))
-	if addrKeys <= 1 {
-		highestAddrStr = ""
-	}
-
-	cnameKeys := len(slices.Collect(maps.Keys(cnameCounts)))
-	if cnameKeys <= 1 {
-		highestCnameStr = ""
-	}
-
-	txtKeys := len(slices.Collect(maps.Keys(txtCounts)))
-	if txtKeys <= 1 {
-		highestTxtStr = ""
-	}
-
-	nsKeys := len(slices.Collect(maps.Keys(nsCounts)))
-	if nsKeys <= 1 {
-		highestNsStr = ""
 	}
 
 	return types.DnsCounts{

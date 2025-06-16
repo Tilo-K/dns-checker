@@ -19,6 +19,8 @@
              stroke-linejoin="round">
             <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
         </svg>
+        <input type="checkbox" name="autorefresh" id="autorefresh" />
+        <label for="autorefresh">Auto refresh</label>
         <input type="text" name="domain"/>
 
         <button hx-post="/hx/dnsResult" hx-target="#result" hx-indicator="#spinner">
@@ -33,9 +35,11 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const submitButton = document.querySelector('#searchForm button');
-
+        const autorefreshCheckbox = document.querySelector('#autorefresh');
         setInterval(() => {
-            submitButton.click();
+            if (autorefreshCheckbox.checked) {
+                submitButton.click();
+            }
         }, 20000);
     });
 </script>

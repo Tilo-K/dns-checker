@@ -29,61 +29,31 @@ func (b ByOperator) Less(i, j int) bool {
 	return b[i].Operator < b[j].Operator
 }
 
-//	func createCustomResolver(dnsServer string, timeout time.Duration) *net.Resolver {
-//		if timeout == 0 {
-//			timeout = time.Second * 10
-//		}
-//
-//		return &net.Resolver{
-//			PreferGo: true,
-//			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-//				d := net.Dialer{
-//					Timeout: timeout,
-//				}
-//				return d.DialContext(ctx, network, dnsServer)
-//			},
-//		}
-//	}
-func createCustomResolver(dnsServer string, timeout time.Duration) *net.Resolver {
-	if timeout == 0 {
+func createCustomResolver(dnsAddr string, timeout time.Duration) (*net.Resolver, error) {
+	if timeout <= 0 {
 		timeout = 10 * time.Second
 	}
+
+	host, port, err := net.SplitHostPort(dnsAddr)
+	if err != nil {
+		host = dnsAddr
+		port = "53"
+	}
+	dnsAddr = net.JoinHostPort(host, port)
+
+	dialer := &net.Dialer{Timeout: timeout}
+
 	return &net.Resolver{
 		PreferGo: true,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-			ipStr, _, err := net.SplitHostPort(dnsServer)
-			if err != nil {
-				return nil, err
-			}
-			ip := net.ParseIP(ipStr)
-			if ip == nil {
-				return nil, fmt.Errorf("invalid IP address: %s", ipStr)
-			}
-			var netType string
-			if strings.Contains(ipStr, "tcp") {
-				if ip.To4() != nil {
-					netType = "tcp4"
-				} else {
-					netType = "tcp6"
-				}
+		Dial: func(ctx context.Context, network, _ string) (net.Conn, error) {
+			if network[0] == 'u' { // udp*, tcp*
+				network = "udp"
 			} else {
-				if ip.To4() != nil {
-					netType = "udp4"
-				} else {
-					netType = "udp6"
-				}
+				network = "tcp"
 			}
-
-			d := net.Dialer{Timeout: timeout}
-			conn, err := d.DialContext(ctx, netType, dnsServer)
-			if err != nil {
-				fmt.Println(err)
-				return nil, err
-			}
-			return conn, nil
+			return dialer.DialContext(ctx, network, dnsAddr)
 		},
-		StrictErrors: true,
-	}
+		StrictErrors: false}, nil
 }
 func GetDnsServers() []types.DnsServer {
 	data, err := os.ReadFile("servers.csv")
@@ -140,7 +110,11 @@ func QueryServers(host string) ([]types.DnsResult, []error) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			resolver := createCustomResolver(server.Address, 0)
+			resolver, err := createCustomResolver(server.Address, 0)
+			if err != nil {
+				errors = append(errors, err)
+				return
+			}
 
 			start := time.Now()
 			hosts, err := resolver.LookupHost(getContext(), host)
@@ -175,6 +149,10 @@ func QueryServers(host string) ([]types.DnsResult, []error) {
 				nss = append(nss, nserver.Host)
 			}
 
+			sort.Strings(hosts)
+			sort.Strings(nss)
+			sort.Strings(txts)
+
 			results = append(results, types.DnsResult{
 				Operator:        server.Operator,
 				DnsServer:       server.Address,
@@ -204,6 +182,8 @@ func ConvertResultToTable(results []types.DnsResult) string {
 		nsClasses := ""
 
 		if counts.Addreses != util.Hash(dnsResult.Addreses) {
+			fmt.Println(counts.Addreses)
+			fmt.Println(util.Hash(dnsResult.Addreses))
 			addrClasses = "highlight"
 		}
 		if counts.Cname != util.Hash([]string{dnsResult.Cname}) {

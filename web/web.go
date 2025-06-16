@@ -22,7 +22,6 @@ func DnsResult(w http.ResponseWriter, req *http.Request) {
 			errRes += erro.Error() + "<br>"
 		}
 		_, _ = w.Write([]byte(errRes))
-		return
 	}
 
 	table := dns.ConvertResultToTable(results)
